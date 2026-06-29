@@ -199,10 +199,7 @@ static bool show_rank(const char *const argv[]) {
 		id_type = id_type_username;
 
 		const size_t username_len = strlen(arg);
-		if (username_len < username_min_len) {
-			eprintf("Username is too short\n");
-			goto out;
-		} if (username_len > username_max_len) {
+		if (username_len > username_max_len) {
 			eprintf("Username is too long\n");
 			goto out;
 		}
