@@ -31,7 +31,7 @@
 
 // CONFIG:
 
-#define TERMINAL_COLORS 0
+#define TERMINAL_COLORS 1
 
 constexpr char color_country[]        = COLOR_BOLD_RED;
 constexpr char color_svr_dist[]       = COLOR_BOLD_BLUE;
