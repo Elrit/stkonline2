@@ -4,9 +4,6 @@
 
 #define SV(cstr) (Str_View){.data = cstr, .len = sizeof(cstr) - 1}
 
-#define LOG_SV(sv) \
-	printf("'%.*s'\n", (int)(sv).len, ((sv).data) ? ((sv).data) : "<null>");
-
 typedef struct {
 	const char *data;
 	size_t len;

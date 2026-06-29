@@ -179,8 +179,9 @@ static Find_Res get_next_attr(
 		return find_res_err;
 	}
 
-	it_len_rem -= (size_t)(val_end - eq);
-	it->data = memchr(val_end, ' ', it_len_rem); // checked in the next call
+	const char *const new_data = val_end + 1;
+	it->len -= (size_t)(new_data - it->data);
+	it->data = new_data;
 
 	return find_res_ok;
 }
@@ -358,6 +359,7 @@ static Find_Res find_player_body(
 	}
 
 	*player_body = sv_make(start, (size_t)(end - start));
+
 	return find_res_ok;
 }
 
@@ -399,7 +401,7 @@ static bool parse_player_attrs(
 		races_count_key
 	);
 	if (!pts_sv.data || !rank_sv.data || !races_count_sv.data) {
-		player->rank = -1;
+		player->rank = 0;
 		player->races_count = 0;
 		return true; // unranked player doesn't have those attributes
 	}
@@ -408,7 +410,7 @@ static bool parse_player_attrs(
 		eprintf("Failed to parse player's rating points\n");
 		return false;
 	}
-	if (!sv_to_long(rank_sv, &player->rank)) {
+	if (!sv_to_size(rank_sv, &player->rank)) {
 		eprintf("Failed to parse player's rank\n");
 		return false;
 	}

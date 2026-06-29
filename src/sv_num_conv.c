@@ -17,26 +17,35 @@ bool sv_to_unsigned(
 	const ulonglong limit,
 	ulonglong *const out
 ) {
-	errno = 0;
-	*out = strtoull(buf.data, nullptr, 10);
-	if (errno) {
-		perrorf(
-			"Failed to convert an attribute to a number '%.*s'\n",
-			(int)buf.len,
-			buf.data
-		);
-		return false;
+	ulonglong num = 0;
+	for (size_t i = 0; i < buf.len; ++i) {
+		const char c = buf.data[i];
+		if (c == '.') {
+			break;
+		}
+		if (!isdigit(c)) {
+			eprintf(
+				"Failed to convert an attribute to a number '%.*s'\n",
+				(int)buf.len,
+				buf.data
+			);
+			return false;
+		}
+
+		const ulonglong digit = (ulonglong)(c - '0');
+		if (num > (limit - digit) / 10) {
+			eprintf(
+				"Attribute value is too large '%.*s'\n",
+				(int)buf.len,
+				buf.data
+			);
+			return false;
+		}
+
+		num = (num * 10) + digit;
 	}
 
-	if (*out > limit) {
-		eprintf(
-			"Attribute value is too large '%.*s'\n",
-			(int)buf.len,
-			buf.data
-		);
-		return false;
-	}
-
+	*out = num;
 	return true;
 }
 

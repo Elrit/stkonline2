@@ -277,6 +277,8 @@ bool dispatch_action(const char *const argv[]) {
 		return false;
 	}
 
+	putchar('\n');
+
 	if (!strcmp(action, "online")) {
 		return show_online_svrs(argv);
 	}

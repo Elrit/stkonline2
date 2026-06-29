@@ -12,9 +12,9 @@ constexpr size_t decimal_digits_count = 2;
 typedef struct {
 	Str_View username;
 	Str_View country_code;
+	size_t rank;
 	size_t races_count;
 	long pts;
-	long rank;
 	uint minutes_played;
 } Player;
 
