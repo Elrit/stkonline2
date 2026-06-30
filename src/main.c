@@ -53,14 +53,13 @@ static bool show_online_svrs(const char *const argv[]) {
 
 		if (show_all || svr.players_count) {
 			print_svr(&svr);
-		}
-
-		if (!svr_found) {
-			svr_found = true;
+			if (!svr_found) {
+				svr_found = true;
+			}
 		}
 	}
 	if (!svr_found) {
-		printf("No active servers\n");
+		printf("No servers found\n");
 	}
 
 	retval = true;
