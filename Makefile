@@ -7,7 +7,7 @@ SRCS := $(wildcard $(SRC_DIR)/*.c)
 OBJS := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SRCS))
 
 FLAGS := -std=gnu23 -O2 -Wall -Wextra -Wconversion
-FLAGS += -D_TIME_BITS=64 -D_FILE_OFFSET_BITS=64
+FLAGS += -D_TIME_BITS=64 -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE
 FLAGS += $(shell pkg-config libcurl --cflags)
 LIBS := $(shell pkg-config libcurl --libs)
 

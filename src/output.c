@@ -11,8 +11,9 @@
 #include "cfg.h"
 #include "errio.h"
 
-#define ABS(x)    ((x) >= 0 ? (x) : -(x))
+#define ABS(x) ((x) >= 0 ? (x) : -(x))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define ARR_CAP(arr) (sizeof(arr) / sizeof(*(arr)))
 
 static void set_color(const char *const color) {
 #if TERMINAL_COLORS
@@ -103,39 +104,82 @@ static void print_player(const Player *const player) {
 	putchar('\n');
 }
 
-static bool print_html_char(Str_View buf) {
-	int base = 10;
-	if (tolower(*buf.data) == 'x') {
-		base = 16;
-		++buf.data;
-		--buf.len;
-	} else if (!isdigit((uchar)*buf.data)) {
-		return false;
+static const char *print_escaped_char(const char *c, const size_t buf_len_rem) {
+	typedef struct {
+		const Str_View name;
+		const char c;
+	} Escaped_Char;
+	
+	Escaped_Char escaped_chars[] = {
+		{SV("quot"), '"'},
+		{SV("amp"),  '&'},
+		{SV("lt"),   '<'},
+		{SV("gt"),   '>'}
+	};
+
+	for (size_t i = 0; i < ARR_CAP(escaped_chars); ++i) {
+		const Escaped_Char ec = escaped_chars[i];
+		if (
+			ec.name.len >= buf_len_rem ||
+			memcmp(c, ec.name.data, ec.name.len)
+		) {
+			continue;
+		}
+
+		if (c[ec.name.len] != ';') {
+			putchar(*c);
+			return c;
+		}
+
+		putchar(ec.c);
+		return c + ec.name.len;
 	}
 
-	int code = 0;
-	for (size_t i = 0; i < buf.len; ++i) {
-		const uchar c = (uchar)tolower(buf.data[i]);
+	return nullptr;
+}
 
-		if (base == 10) {
-			if (!isdigit(c)) {
-				return false;
+static const char *print_html_char(const char *c, size_t buf_len_rem) {
+	const char *const start = c;
+
+	if (*c != '#') {
+		return print_escaped_char(c, buf_len_rem);
+	}
+	++c;
+
+	const bool hex = tolower(*c) == 'x';
+	if (hex) {
+		++c;
+		--buf_len_rem;
+	} else if (!isdigit((uchar)*c)) {
+		return start;
+	}
+
+	constexpr size_t max_len = 7;
+	const size_t len = MIN(buf_len_rem, max_len);
+	const char *const end = c + len; // last char
+	
+	int code = 0;
+	for (; c < end && *c != ';'; ++c) {
+		const uchar uc = (uchar)tolower(*c);
+
+		if (hex) {
+			if (!isxdigit(uc)) {
+				return start;
 			}
 		} else {
-			if (!isxdigit(c)) {
-				return false;
+			if (!isdigit(uc)) {
+				return start;
 			}
 		}
 
 		int digit;
-		if (isdigit(c)) {
-			digit = c - '0';
-		} else if (isxdigit(c)) {
-			digit = c - 'a' + 10;
+		if (isdigit(uc)) {
+			digit = uc - '0';
 		} else {
-			return false;
+			digit = uc - 'a' + 10;
 		}
-
+			
+		const int base = hex ? 16 : 10;
 		code = (code * base) + digit;
 	}
 
@@ -145,65 +189,53 @@ static bool print_html_char(Str_View buf) {
 	if (code <= 0x7F) {
 		count = 1;
 		bytes[0] = (uchar)code;
-	} else if (code <= 0x7FF) {                                         // 11
+	} else if (code <= 0x7FF) { // 11
+		count = 2;
 		bytes[0] = (uchar)(0b11000000 | (code >> 6));                 // 5
 		bytes[1] = (uchar)(0b10000000 | (code & 0b00111111));         // 6
-		count = 2;
-	} else if (code <= 0xFFFF) {                                        // 16
+	} else if (code <= 0xFFFF) { // 16
+		count = 3;
 		bytes[0] = (uchar)(0b11100000 | (code >> 12));                // 4
 		bytes[1] = (uchar)(0b10000000 | ((code >> 6) & 0b00111111));  // 6
 		bytes[2] = (uchar)(0b10000000 | (code & 0b00111111));         // 6
-		count = 3;
-	} else if (code <= 0x1FFFFF) {                                      // 21
+	} else if (code <= 0x1FFFFF) { // 21
+		count = 4;
 		bytes[0] = (uchar)(0b11110000 | (code >> 18));                // 3
 		bytes[1] = (uchar)(0b10000000 | ((code >> 12) & 0b00111111)); // 6
 		bytes[2] = (uchar)(0b10000000 | ((code >> 6) & 0b00111111));  // 6
 		bytes[3] = (uchar)(0b10000000 | (code & 0b00111111));         // 6
-		count = 4;
 	} else {
-		return false;	
+		return start;	
 	}
 
 	for (size_t i = 0; i < count; ++i) {
 		putchar(bytes[i]);
 	}
 
-	return true;
+	return c;
 }
 
 static void print_html_str(const Str_View buf) {
-	for (size_t i = 0; i < buf.len; ++i) {
-		const char *const c = (char *)(buf.data + i);
-
-		constexpr char delim[] = "&#";
-		constexpr size_t delim_len = sizeof(delim) - 1;
-
-		if (buf.len - i < delim_len + 2 || memcmp(c, delim, delim_len)) {
+	const char *const end = buf.data + buf.len;
+	for (const char *c = buf.data; c < end; ++c) {
+		if (*c != '&') {
 			putchar(*c);
 			continue;
 		}
 
-		const char *const start = c + delim_len;
-		const size_t buf_len_rem = buf.len - (size_t)(start - buf.data);
+		size_t buf_len_rem = (size_t)(end - c);
 
-		constexpr size_t max_digits = 7;
-		const size_t search_len = MIN(max_digits, buf_len_rem);
-		const char *const end = memchr(start, ';', search_len);
-		if (!end) {
-			goto err;
+		constexpr size_t min_buf_len = 4;
+		if (buf_len_rem < min_buf_len) {
+			putchar(*c);
+			continue;
 		}
 
-		const Str_View html_char = sv_make(start, (size_t)(end - start));
-		if (!print_html_char(html_char)) {
-			goto err;
-		}
+		++c;
+		--buf_len_rem;
 
-		i += delim_len + html_char.len;
+		c = print_html_char(c, buf_len_rem);
 	}
-
-	return;
-err:
-	eprintf("\nInvalid HTML character\n");
 }
 
 void print_svr(const Svr *const svr) {
@@ -237,7 +269,6 @@ void print_svr(const Svr *const svr) {
 		printf("+%zu", svr->bots_count);
 	}
 	printf("/%zu)", svr->max_players);
-	reset_color();
 
 	printf(" [");
 
