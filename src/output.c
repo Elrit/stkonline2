@@ -269,6 +269,7 @@ void print_svr(const Svr *const svr) {
 		printf("+%zu", svr->bots_count);
 	}
 	printf("/%zu)", svr->max_players);
+	reset_color();
 
 	printf(" [");
 
