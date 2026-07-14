@@ -378,6 +378,7 @@ void print_lb_player(const Lb_Player *const player, const size_t rank) {
 	set_color(color_lb_disconn);
 	constexpr int drate_int_part_w = 3;
 	PRINT_DECIMAL(player->disconn_rate, drate_int_part_w);
+	putchar('%');
 	reset_color();
 	printf(" disc");
 
