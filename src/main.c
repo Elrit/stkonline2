@@ -40,6 +40,8 @@ static bool show_online_svrs(const char *const argv[]) {
 		goto cleanup;
 	}
 
+	putchar('\n');
+
 	Str_View buf_rem = sv_make(buf.data, buf.len);
 	bool svr_found = false;
 	while (true) {
@@ -272,8 +274,6 @@ bool dispatch_action(const char *const argv[]) {
 		eprintf("No action given\n");
 		return false;
 	}
-
-	putchar('\n');
 
 	if (!strcmp(action, "online")) {
 		return show_online_svrs(argv);
