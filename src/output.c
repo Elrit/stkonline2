@@ -233,11 +233,11 @@ static void print_country(const Str_View country_code) {
 static void print_player(const Player *const player) {
 	printf("%s", indent);
 
-	set_color(color_country);
 	putchar('(');
+	set_color(color_country);
 	print_country(player->country_code);
-	putchar(')');
 	reset_color();
+	putchar(')');
 
 	putchar(' ');
 
