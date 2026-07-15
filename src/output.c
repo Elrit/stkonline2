@@ -65,43 +65,37 @@ static const char *svr_difficulty_to_str(const Svr_Difficulty d) {
 	}
 }
 
-static void print_player(const Player *const player) {
-	printf("%s", indent);
+static bool print_unicode(const int code) {
+	uchar bytes[4] = {};
+	size_t count;
 
-	set_color(color_country);
-	printf(
-		"(%.*s)",
-		(int)player->country_code.len,
-		player->country_code.data
-	);
-	reset_color();
-
-	putchar(' ');
-
-	set_color(color_username);
-	printf("%.*s", (int)player->username.len, player->username.data);
-	reset_color();
-
-	putchar(' ');
-
-	set_color(color_play_time);
-	printf("[%um]", player->minutes_played);
-	reset_color();
-
-	if (player->rank) {
-		putchar(' ');
-
-		set_color(color_ranking_info);
-		printf(
-			"[#%ld, %ldpts, %zu races]",
-			player->rank,
-			player->pts,
-			player->races_count
-		);
-		reset_color();
+	if (code <= 0x7F) {
+		count = 1;
+		bytes[0] = (uchar)code;
+	} else if (code <= 0x7FF) { // 11
+		count = 2;
+		bytes[0] = (uchar)(0b11000000 | (code >> 6));                 // 5
+		bytes[1] = (uchar)(0b10000000 | (code & 0b00111111));         // 6
+	} else if (code <= 0xFFFF) { // 16
+		count = 3;
+		bytes[0] = (uchar)(0b11100000 | (code >> 12));                // 4
+		bytes[1] = (uchar)(0b10000000 | ((code >> 6) & 0b00111111));  // 6
+		bytes[2] = (uchar)(0b10000000 | (code & 0b00111111));         // 6
+	} else if (code <= 0x1FFFFF) { // 21
+		count = 4;
+		bytes[0] = (uchar)(0b11110000 | (code >> 18));                // 3
+		bytes[1] = (uchar)(0b10000000 | ((code >> 12) & 0b00111111)); // 6
+		bytes[2] = (uchar)(0b10000000 | ((code >> 6) & 0b00111111));  // 6
+		bytes[3] = (uchar)(0b10000000 | (code & 0b00111111));         // 6
+	} else {
+		return false;	
 	}
 
-	putchar('\n');
+	for (size_t i = 0; i < count; ++i) {
+		putchar(bytes[i]);
+	}
+
+	return true;
 }
 
 static const char *print_escaped_char(const char *c, const size_t buf_len_rem) {
@@ -183,33 +177,8 @@ static const char *print_html_char(const char *c, size_t buf_len_rem) {
 		code = (code * base) + digit;
 	}
 
-	uchar bytes[4] = {};
-	size_t count;
-
-	if (code <= 0x7F) {
-		count = 1;
-		bytes[0] = (uchar)code;
-	} else if (code <= 0x7FF) { // 11
-		count = 2;
-		bytes[0] = (uchar)(0b11000000 | (code >> 6));                 // 5
-		bytes[1] = (uchar)(0b10000000 | (code & 0b00111111));         // 6
-	} else if (code <= 0xFFFF) { // 16
-		count = 3;
-		bytes[0] = (uchar)(0b11100000 | (code >> 12));                // 4
-		bytes[1] = (uchar)(0b10000000 | ((code >> 6) & 0b00111111));  // 6
-		bytes[2] = (uchar)(0b10000000 | (code & 0b00111111));         // 6
-	} else if (code <= 0x1FFFFF) { // 21
-		count = 4;
-		bytes[0] = (uchar)(0b11110000 | (code >> 18));                // 3
-		bytes[1] = (uchar)(0b10000000 | ((code >> 12) & 0b00111111)); // 6
-		bytes[2] = (uchar)(0b10000000 | ((code >> 6) & 0b00111111));  // 6
-		bytes[3] = (uchar)(0b10000000 | (code & 0b00111111));         // 6
-	} else {
-		return start;	
-	}
-
-	for (size_t i = 0; i < count; ++i) {
-		putchar(bytes[i]);
+	if (!print_unicode(code)) {
+		return start;
 	}
 
 	return c;
@@ -238,6 +207,66 @@ static void print_html_str(const Str_View buf) {
 	}
 }
 
+static void print_country_flag(const Str_View country_code) {
+	if (country_code.len < 2) {
+		return;
+	}
+
+	for (int i = 0; i < 2; ++i) {
+		const int c = (int)toupper(country_code.data[i]) + 127397;
+		print_unicode(c);
+	}
+}
+
+static void print_country(const Str_View country_code) {
+	if (print_country_flags) {
+		print_country_flag(country_code);
+	} else {
+		printf(
+			"%.*s",
+			(int)country_code.len,
+			country_code.data
+		);
+	}
+}
+
+static void print_player(const Player *const player) {
+	printf("%s", indent);
+
+	set_color(color_country);
+	putchar('(');
+	print_country(player->country_code);
+	putchar(')');
+	reset_color();
+
+	putchar(' ');
+
+	set_color(color_username);
+	printf("%.*s", (int)player->username.len, player->username.data);
+	reset_color();
+
+	putchar(' ');
+
+	set_color(color_play_time);
+	printf("[%um]", player->minutes_played);
+	reset_color();
+
+	if (player->rank) {
+		putchar(' ');
+
+		set_color(color_ranking_info);
+		printf(
+			"[#%ld, %ldpts, %zu races]",
+			player->rank,
+			player->pts,
+			player->races_count
+		);
+		reset_color();
+	}
+
+	putchar('\n');
+}
+
 void print_svr(const Svr *const svr) {
 	putchar('(');
 
@@ -246,7 +275,7 @@ void print_svr(const Svr *const svr) {
 	}
 
 	set_color(color_country);
-	printf("%.*s", (int)svr->country_code.len, svr->country_code.data);
+	print_country(svr->country_code);
 	reset_color();
 
 	putchar('/');

@@ -51,5 +51,6 @@ constexpr char color_lb_race_count[] = COLOR_BOLD_BLUE;
 constexpr char color_lb_deviation[]  = COLOR_BOLD_PURPLE;
 constexpr char color_lb_disconn[]    = COLOR_BOLD_YELLOW;
 
+constexpr bool print_country_flags = false;
 constexpr char priv_svr_indicator[] = "🔒";
 constexpr char indent[] = "\t";
