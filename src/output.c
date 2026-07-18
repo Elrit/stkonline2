@@ -292,13 +292,15 @@ void print_svr(const Svr *const svr) {
 
 	putchar('\n');
 
+	putchar('(');
 	set_color(color_player_count);
-	printf("(%zu", svr->players_count);
+	printf("%zu", svr->players_count);
 	if (svr->bots_count) {
 		printf("+%zu", svr->bots_count);
 	}
-	printf("/%zu)", svr->max_players);
+	printf("/%zu", svr->max_players);
 	reset_color();
+	putchar(')');
 
 	printf(" [");
 
